@@ -1,0 +1,45 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - "src/**"
+      - "*.sln"
+      - "*.props"
+      - "*.targets"
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - "src/**"
+      - "*.sln"
+      - "*.props"
+      - "*.targets"
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+
+    - name: Restore
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build -c Release --no-restore
+
+    - name: Tests
+      run: dotnet test /p:CollectCoverage=true /p:CoverletOutput=TestResults/ /p:CoverletOutputFormat=opencover --no-build -c Release --no-restore
+
+    - name: Test Report
+      uses: dorny/test-reporter@v1
+      with:
+        name: DotNET Tests
+        path: "**/**.trx"
+        reporter: dotnet-trx
