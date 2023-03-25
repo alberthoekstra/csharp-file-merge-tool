@@ -7,7 +7,9 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Formatting;
 
-public class CsharpFileMerger
+namespace CsharpFileMergeTool;
+
+public static class CsharpFileMerger
 {
     /// <summary>
     /// Merges all .cs files into one single file
@@ -44,7 +46,7 @@ public class CsharpFileMerger
     /// </summary>
     /// <param name="code">File content of a cs file</param>
     /// <returns></returns>
-    private static string MoveUsingStatementsInsideNamespace(string code)
+    public static string MoveUsingStatementsInsideNamespace(string code)
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(code);
         var root = syntaxTree.GetCompilationUnitRoot();
