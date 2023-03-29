@@ -31,14 +31,51 @@ public static class CsharpFileMerger
             throw new ArgumentException("No C# files found in directory.");
         }
 
-        using var writer = new StreamWriter(outputFile);
-
-        foreach (var file in files)
+        var fileContents = files.Select(File.ReadAllText).ToArray();
+        var result = MergeFileContent(fileContents);
+        
+        File.WriteAllText(outputFile, result);
+    }
+    
+    /// <summary>
+    /// Merges all .cs file contents into one single string
+    /// </summary>
+    /// <param name="fileContents"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public static string MergeFileContent(params string[] fileContents)
+    {
+        if (fileContents == null || fileContents.Length == 0)
         {
-            var fileContents = File.ReadAllText(file);
-            var changedFileContent = MoveUsingStatementsInsideNamespace(fileContents);
-            await writer.WriteAsync(changedFileContent);
+            throw new ArgumentNullException(nameof(fileContents));
         }
+
+        var mergedMembers = new SyntaxList<MemberDeclarationSyntax>();
+        var mergedUsings = new SyntaxList<UsingDirectiveSyntax>();
+        
+        foreach (var fileContent in fileContents)
+        {
+            var syntaxTree = CSharpSyntaxTree.ParseText(fileContent);
+            
+            var root = syntaxTree.GetCompilationUnitRoot();
+
+            mergedUsings = mergedUsings.AddRange(root.Usings);
+            mergedMembers = mergedMembers.AddRange(root.Members);
+        }
+
+        var uniqueUsings = mergedUsings.Distinct(SyntaxNodeComparer.UsingDirectiveComparer).ToArray();
+        
+        var orderedMembers = mergedMembers
+            .OrderBy(member => member is NamespaceDeclarationSyntax ? 1 : 0)
+            .ToArray();
+        
+        var mergedRoot = SyntaxFactory.CompilationUnit()
+            .WithUsings(SyntaxFactory.List(uniqueUsings))
+            .WithMembers(SyntaxFactory.List(orderedMembers))
+            .NormalizeWhitespace();
+
+        var result = mergedRoot.ToFullString();
+        return result;
     }
 
     /// <summary>
